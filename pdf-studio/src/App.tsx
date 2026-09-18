@@ -2,6 +2,7 @@ import { useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { PDFDocument } from 'pdf-lib'
+import EditPage from './pages/EditPage'
 
 import {
   DndContext,
@@ -161,6 +162,9 @@ function PdfPageArea({
 }
 
 export default function App() {
+  const [workspace, setWorkspace] =
+  useState<'organize' | 'edit'>('organize')
+
   const [pdfFiles, setPdfFiles] = useState<PdfFileItem[]>([])
   const [isExporting, setIsExporting] = useState(false)
 
@@ -488,119 +492,147 @@ if (window.showSaveFilePicker) {
     }
   }
 
-  return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div>
-          <h1>PDF Studio</h1>
-
-          <p>
-            Organize and combine PDFs directly in your browser.
-          </p>
-        </div>
-
-        <div className="header-actions">
-          <label className="add-button">
-            Add PDFs
-
-            <input
-              type="file"
-              accept="application/pdf"
-              multiple
-              onChange={(event) =>
-                handleFiles(
-                  event.target.files,
-                )
-              }
-              hidden
-            />
-          </label>
-
-          <button
-            type="button"
-            className="export-button"
-            disabled={
-              totalPages === 0 ||
-              isExporting
-            }
-            onClick={exportCombinedPdf}
-          >
-            {isExporting
-              ? 'Exporting...'
-              : `Export PDF (${totalPages})`}
-          </button>
-        </div>
-      </header>
-
-      <section
-        className="drop-zone"
-        onDragOver={(event) =>
-          event.preventDefault()
+return (
+  <main className="app-shell">
+    <nav className="workspace-nav">
+      <button
+        type="button"
+        className={
+          workspace === 'organize'
+            ? 'workspace-tab active'
+            : 'workspace-tab'
         }
-        onDrop={(event) => {
-          event.preventDefault()
-          handleFiles(
-            event.dataTransfer.files,
-          )
-        }}
+        onClick={() => setWorkspace('organize')}
       >
-        <strong>Drop PDFs here</strong>
+        Organize & Combine
+      </button>
 
-        <span>
-          or click “Add PDFs”
-        </span>
-      </section>
-
-      <DndContext
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+      <button
+        type="button"
+        className={
+          workspace === 'edit'
+            ? 'workspace-tab active'
+            : 'workspace-tab'
+        }
+        onClick={() => setWorkspace('edit')}
       >
-        <section className="file-list">
-          {pdfFiles.map((pdf) => (
-            <article
-              key={pdf.id}
-              className="pdf-card"
-            >
-              <button
-                className="pdf-header"
-                onClick={() =>
-                  toggleExpanded(pdf.id)
+        Edit PDF
+      </button>
+    </nav>
+
+    {workspace === 'edit' ? (
+      <EditPage />
+    ) : (
+      <>
+        <header className="app-header">
+          <div>
+            <h1>PDF Studio</h1>
+
+            <p>
+              Organize and combine PDFs directly in your browser.
+            </p>
+          </div>
+
+          <div className="header-actions">
+            <label className="add-button">
+              Add PDFs
+
+              <input
+                type="file"
+                accept="application/pdf"
+                multiple
+                onChange={(event) =>
+                  handleFiles(event.target.files)
                 }
-              >
-                <span>
-                  {pdf.expanded
-                    ? '▼'
-                    : '▶'}
-                </span>
+                hidden
+              />
+            </label>
 
-                <span className="file-name">
-                  {pdf.file.name}
-                </span>
+            <button
+              type="button"
+              className="export-button"
+              disabled={
+                totalPages === 0 ||
+                isExporting
+              }
+              onClick={exportCombinedPdf}
+            >
+              {isExporting
+                ? 'Exporting...'
+                : `Export PDF (${totalPages})`}
+            </button>
+          </div>
+        </header>
 
-                <span className="page-count">
-                  {pdf.pages.length}{' '}
-                  {pdf.pages.length === 1
-                    ? 'page'
-                    : 'pages'}
-                </span>
-              </button>
+        <section
+          className="drop-zone"
+          onDragOver={(event) =>
+            event.preventDefault()
+          }
+          onDrop={(event) => {
+            event.preventDefault()
+            handleFiles(event.dataTransfer.files)
+          }}
+        >
+          <strong>Drop PDFs here</strong>
 
-              {pdf.expanded && (
-                <PdfPageArea
-                  pdf={pdf}
-                  onDelete={deletePage}
-                />
-              )}
-            </article>
-          ))}
-
-          {pdfFiles.length === 0 && (
-            <div className="empty-state">
-              No PDFs loaded yet.
-            </div>
-          )}
+          <span>
+            or click “Add PDFs”
+          </span>
         </section>
-      </DndContext>
-    </main>
-  )
+
+        <DndContext
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <section className="file-list">
+            {pdfFiles.map((pdf) => (
+              <article
+                key={pdf.id}
+                className="pdf-card"
+              >
+                <button
+                  className="pdf-header"
+                  onClick={() =>
+                    toggleExpanded(pdf.id)
+                  }
+                >
+                  <span>
+                    {pdf.expanded
+                      ? '▼'
+                      : '▶'}
+                  </span>
+
+                  <span className="file-name">
+                    {pdf.file.name}
+                  </span>
+
+                  <span className="page-count">
+                    {pdf.pages.length}{' '}
+                    {pdf.pages.length === 1
+                      ? 'page'
+                      : 'pages'}
+                  </span>
+                </button>
+
+                {pdf.expanded && (
+                  <PdfPageArea
+                    pdf={pdf}
+                    onDelete={deletePage}
+                  />
+                )}
+              </article>
+            ))}
+
+            {pdfFiles.length === 0 && (
+              <div className="empty-state">
+                No PDFs loaded yet.
+              </div>
+            )}
+          </section>
+        </DndContext>
+      </>
+    )}
+  </main>
+)
 }
